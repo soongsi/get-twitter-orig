@@ -8,7 +8,15 @@ export default function App() {
   const [error, setError] = useState("");
 
   const handleFetch = async () => {
-    if (!url.trim()) return alert("트윗 URL을 입력하세요!");
+    if (!url.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "URL을 입력해주세요",
+        text: "트윗 링크를 입력해야 이미지를 불러올 수 있습니다.",
+        confirmButtonColor: "#1d9bf0",
+      });
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -22,8 +30,9 @@ export default function App() {
       const res = await fetch(apiUrl);
       const data = await res.json();
 
-      if (!data.media_extended || data.media_extended.length === 0)
+      if (!data.media_extended || data.media_extended.length === 0) {
         throw new Error("이미지를 찾을 수 없습니다.");
+      }
 
       const originals = data.media_extended.map((m) => {
         let imgUrl = m.url;
@@ -39,6 +48,12 @@ export default function App() {
       setImages(originals);
     } catch (err) {
       setError(err.message);
+      Swal.fire({
+        icon: "error",
+        title: "에러 발생 😢",
+        text: err.message || "이미지를 불러올 수 없습니다.",
+        confirmButtonColor: "#1d9bf0",
+      });
     } finally {
       setLoading(false);
     }
@@ -67,11 +82,15 @@ export default function App() {
       a.click();
       URL.revokeObjectURL(a.href);
     } catch (err) {
-      alert("다운로드 오류: " + err.message);
+      Swal.fire({
+        icon: "error",
+        title: "다운로드 실패",
+        text: "이미지를 저장하는 중 오류가 발생했습니다.",
+        confirmButtonColor: "#1d9bf0",
+      });
     }
   };
 
-  // ✅ 초기화 버튼 추가
   const handleReset = () => {
     setUrl("");
     setImages([]);
@@ -97,8 +116,6 @@ export default function App() {
           🔄 초기화
         </button>
       </div>
-
-      {error && <p className="error">❌ {error}</p>}
 
       <div className="images">
         {images.map((img, idx) => (
