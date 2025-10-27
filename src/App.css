@@ -28,6 +28,14 @@ p {
   margin-bottom: 30px;
 }
 
+button.reset {
+  background: #aaa;
+}
+
+button.reset:hover {
+  background: #888;
+}
+
 input {
   width: 320px;
   max-width: 85vw;
