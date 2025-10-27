@@ -1,0 +1,100 @@
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #f7f9fa;
+  margin: 0;
+  padding: 0;
+}
+
+.app {
+  text-align: center;
+  padding: 30px;
+}
+
+h2 {
+  color: #1d9bf0;
+  margin-bottom: 10px;
+}
+
+p {
+  color: #555;
+  margin-bottom: 20px;
+}
+
+.input-container {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+input {
+  width: 320px;
+  max-width: 85vw;
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+  outline: none;
+  transition: 0.2s;
+}
+
+input:focus {
+  border-color: #1d9bf0;
+  box-shadow: 0 0 6px rgba(29, 155, 240, 0.3);
+}
+
+button {
+  padding: 10px 16px;
+  font-size: 15px;
+  border: none;
+  border-radius: 8px;
+  background: #1d9bf0;
+  color: white;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  background: #0d8ce0;
+}
+
+button:disabled {
+  background: #999;
+  cursor: not-allowed;
+}
+
+.images {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.image-block {
+  margin-bottom: 40px;
+}
+
+img {
+  max-width: 480px;
+  width: 90%;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  margin-bottom: 10px;
+}
+
+@media (max-width: 600px) {
+  h2 {
+    font-size: 20px;
+  }
+  input {
+    width: 90%;
+    font-size: 14px;
+  }
+  button {
+    width: 90%;
+    font-size: 14px;
+  }
+  img {
+    max-width: 95vw;
+  }
+}
