@@ -71,9 +71,18 @@ export default function App() {
     }
   };
 
+  // ✅ 초기화 버튼 추가
+  const handleReset = () => {
+    setUrl("");
+    setImages([]);
+    setError("");
+    setLoading(false);
+  };
+
   return (
     <div className="app">
       <h2>🐦 트위터 원본 이미지 다운로더</h2>
+      <p>vxtwitter API 기반 · 모바일 대응 · 자동 다운로드 지원</p>
 
       <div className="input-container">
         <input
@@ -84,6 +93,9 @@ export default function App() {
         />
         <button onClick={handleFetch} disabled={loading}>
           {loading ? "불러오는 중..." : "이미지 찾기"}
+        </button>
+        <button className="reset" onClick={handleReset} disabled={loading}>
+          🔄 초기화
         </button>
       </div>
 
