@@ -82,7 +82,6 @@ export default function App() {
   return (
     <div className="app">
       <h2>🐦 트위터 원본 이미지 다운로더</h2>
-      <p>vxtwitter API 기반 · 모바일 대응 · 자동 다운로드 지원</p>
 
       <div className="input-container">
         <input
