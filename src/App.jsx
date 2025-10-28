@@ -27,8 +27,8 @@ export default function App() {
     if (!tweetUrlRegex.test(url)) {
       Swal.fire({
         icon: "error",
-        title: "유효하지 않은 주소입니다.",
-        text: "트윗 URL 형식이 올바르지 않습니다.<br>예) https://x.com/TVXQ/status/1234567890",
+        title: "트윗 URL 형식이 올바르지 않습니다.",
+        text: "예) https://x.com/TVXQ/status/1234567890",
         confirmButtonColor: "#1d9bf0",
         customClass: { title: "swal-custom-title" },
       });
