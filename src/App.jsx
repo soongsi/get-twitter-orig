@@ -11,8 +11,7 @@ export default function App() {
     if (!url.trim()) {
       Swal.fire({
         icon: "warning",
-        title: "URL을 입력해주세요",
-        text: "트윗 링크를 입력해야 이미지를 불러올 수 있습니다.",
+        title: "트윗 URL을 입력해주세요",
         confirmButtonColor: "#1d9bf0",
       });
       return;
@@ -100,7 +99,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <h2>🐦 트위터 원본 이미지 다운로더</h2>
+      <h2>트위터 원본 이미지 다운로더</h2>
 
       <div className="input-container">
         <input
