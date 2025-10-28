@@ -13,6 +13,9 @@ export default function App() {
         icon: "warning",
         title: "트윗 URL을 입력해주세요",
         confirmButtonColor: "#1d9bf0",
+        customClass: {
+          title: 'swal-custom-title'
+        }
       });
       return;
     }
@@ -52,6 +55,9 @@ export default function App() {
         title: "에러 발생 😢",
         text: err.message || "이미지를 불러올 수 없습니다.",
         confirmButtonColor: "#1d9bf0",
+        customClass: {
+          title: 'swal-custom-title'
+        }
       });
     } finally {
       setLoading(false);
@@ -86,6 +92,9 @@ export default function App() {
         title: "다운로드 실패",
         text: "이미지를 저장하는 중 오류가 발생했습니다.",
         confirmButtonColor: "#1d9bf0",
+        customClass: {
+          title: 'swal-custom-title'
+        }
       });
     }
   };
