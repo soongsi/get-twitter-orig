@@ -80,6 +80,9 @@ button:disabled {
 
 .image-block {
   margin-bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 img {
