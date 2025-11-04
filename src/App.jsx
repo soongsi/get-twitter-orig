@@ -129,7 +129,7 @@ export default function App() {
   
     Swal.fire({
       title: "파일 저장 중...",
-      html: `0 / ${images.length} 완료`,
+      html: `0 / ${medias.length} 완료`,
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading(),
       customClass: { title: "swal-custom-title" }
