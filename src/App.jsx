@@ -223,7 +223,7 @@ export default function App() {
                 <video
                   poster={media.thumb}
                   src={media.url}
-                  controls={false}
+                  controls={true}
                   onClick={(e) => (e.target.controls = true)}
                 />
               ) : isGif ? (
