@@ -113,12 +113,12 @@ export default function App() {
 
   const handleBulkDownload = async () => {
     if (images.length === 0) {
-      Swal.fire({ icon: "info", title: "다운로드할 이미지가 없습니다" });
+      Swal.fire({ icon: "info", title: "저장할 이미지가 없습니다" });
       return;
     }
   
     Swal.fire({
-      title: "이미지 다운로드 중...",
+      title: "이미지 저장 중...",
       html: `0 / ${images.length} 완료`,
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading(),
@@ -129,7 +129,7 @@ export default function App() {
   
     let completed = 0;
   
-    // ✅ 병렬로 모든 fetch 수행
+    // 병렬로 모든 fetch 수행
     await Promise.all(
       images.map(async (imgUrl, idx) => {
         try {
@@ -144,7 +144,7 @@ export default function App() {
           completed++;
           Swal.update({ html: `${completed} / ${images.length} 완료` });
         } catch (err) {
-          console.error("다운로드 실패:", imgUrl, err);
+          console.error("저장 실패:", imgUrl, err);
         }
       })
     );
@@ -152,7 +152,7 @@ export default function App() {
     Swal.close();
     Swal.fire({
       icon: "success",
-      title: "모두 다운로드 완료!",
+      title: "모두 저장 완료!",
       text: `${completed}개의 이미지를 저장했습니다.`,
       confirmButtonColor: "#1d9bf0",
     });
@@ -183,7 +183,7 @@ export default function App() {
           🔄 초기화
         </button>
         <button onClick={handleBulkDownload} disabled={images.length === 0}>
-          📥 모두 다운로드
+          📥 모두 저장
         </button>
       </div>
 
@@ -192,7 +192,7 @@ export default function App() {
           <div key={idx} className="image-block">
             <img src={img} alt={`tweet_${idx}`} />
             <button onClick={() => handleDownload(img)}>
-              📥 이미지 {idx + 1} 다운로드
+              📥 이미지 {idx + 1} 저장
             </button>
           </div>
         ))}
