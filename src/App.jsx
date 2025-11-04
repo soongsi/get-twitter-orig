@@ -53,16 +53,22 @@ export default function App() {
       }
 
       const originals = data.media_extended.map((m) => {
-        let imgUrl = m.url;
-        if (imgUrl.includes("name=")) {
-          imgUrl = imgUrl.replace(/name=[^&]+/, "name=orig");
-        } else {
-          const sep = imgUrl.includes("?") ? "&" : "?";
-          imgUrl = `${imgUrl}${sep}name=orig`;
+        let mediaUrl = m.url;
+        if (m.type === "photo") {
+          if (mediaUrl.includes("name="))
+            mediaUrl = mediaUrl.replace(/name=[^&]+/, "name=orig");
+          else {
+            const sep = mediaUrl.includes("?") ? "&" : "?";
+            mediaUrl = `${mediaUrl}${sep}name=orig`;
+          }
         }
-        return imgUrl;
+      
+        return {
+          url: mediaUrl,
+          type: m.type,
+          thumb: m.thumbnail_url || null
+        };
       });
-
       setImages(originals);
     } catch (err) {
       setError(err.message);
@@ -202,11 +208,19 @@ export default function App() {
       </div>
 
       <div className="images">
-        {images.map((img, idx) => (
+        {images.map((media, idx) => (
           <div key={idx} className="image-block">
-            <img src={img} alt={`tweet_${idx}`} />
-            <button onClick={() => handleDownload(img)}>
-              📥 저장
+            {media.type === "photo" ? (
+              <img src={media.url} alt={`tweet_${idx}`} />
+            ) : (
+              <video
+                poster={media.thumb} // ✅ 썸네일
+                src={media.url}
+                controls
+              />
+            )}
+            <button onClick={() => handleDownload(media, idx)}>
+              📥 파일 {idx + 1} 다운로드
             </button>
           </div>
         ))}
