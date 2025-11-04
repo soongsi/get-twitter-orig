@@ -49,7 +49,7 @@ export default function App() {
       const data = await res.json();
 
       if (!data.media_extended || data.media_extended.length === 0) {
-        throw new Error("이미지를 찾을 수 없습니다.");
+        throw new Error("파일을 찾을 수 없습니다.");
       }
 
       const originals = data.media_extended.map((m) => {
@@ -69,7 +69,7 @@ export default function App() {
       Swal.fire({
         icon: "error",
         title: "에러 발생 😢",
-        text: err.message || "이미지를 불러올 수 없습니다.",
+        text: err.message || "파일을 불러올 수 없습니다.",
         confirmButtonColor: "#1d9bf0",
         customClass: { title: "swal-custom-title" },
       });
@@ -78,7 +78,10 @@ export default function App() {
     }
   };
 
-  const handleDownload = async (imgUrl) => {
+  const handleDownload = async (media, idx) => {
+    const { url, type } = media;
+    const ext = type === "video" || type === "animated_gif" ? "mp4" : "jpg";
+  
     const timestamp = new Date();
     const serial = `${timestamp.getFullYear()}${String(
       timestamp.getMonth() + 1
@@ -90,11 +93,12 @@ export default function App() {
     )}${String(timestamp.getSeconds()).padStart(2, "0")}_${Math.floor(
       Math.random() * 1000
     )}`;
-    const filename = `twitter_${serial}.jpg`;
-
+  
+    const filename = `twitter_${serial}_${idx + 1}.${ext}`;
+  
     try {
-      const imgRes = await fetch(imgUrl);
-      const blob = await imgRes.blob();
+      const res = await fetch(url);
+      const blob = await res.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = filename;
@@ -103,39 +107,49 @@ export default function App() {
     } catch (err) {
       Swal.fire({
         icon: "error",
-        title: "다운로드 실패",
-        text: "이미지를 저장하는 중 오류가 발생했습니다.",
-        confirmButtonColor: "#1d9bf0",
-        customClass: { title: "swal-custom-title" },
+        title: "저장 실패",
+        text: "파일 저장 중 오류가 발생했습니다.",
+        confirmButtonColor: "#1d9bf0"
       });
     }
   };
 
   const handleBulkDownload = async () => {
     if (images.length === 0) {
-      Swal.fire({ icon: "info", title: "저장할 이미지가 없습니다" });
+      Swal.fire({ icon: "info", title: "저장할 파일이 없습니다" });
       return;
     }
   
-    Swal.fire({
-      title: "이미지 저장 중...",
-      html: `0 / ${images.length} 완료`,
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-    });
-  
-    const timestamp = new Date();
-    const baseSerial = `${timestamp.getFullYear()}${String(timestamp.getMonth() + 1).padStart(2, "0")}${String(timestamp.getDate()).padStart(2, "0")}_${String(timestamp.getHours()).padStart(2, "0")}${String(timestamp.getMinutes()).padStart(2, "0")}${String(timestamp.getSeconds()).padStart(2, "0")}`;
-  
     let completed = 0;
   
-    // 병렬로 모든 fetch 수행
+    Swal.fire({
+      title: "파일 저장 중...",
+      html: `0 / ${images.length} 완료`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+  
     await Promise.all(
-      images.map(async (imgUrl, idx) => {
+      images.map(async (media, idx) => {
+        const { url, type } = media;
+        const ext = type === "video" || type === "animated_gif" ? "mp4" : "jpg";
+  
+        const timestamp = new Date();
+        const serial = `${timestamp.getFullYear()}${String(
+          timestamp.getMonth() + 1
+        ).padStart(2, "0")}${String(timestamp.getDate()).padStart(2, "0")}_${String(
+          timestamp.getHours()
+        ).padStart(2, "0")}${String(timestamp.getMinutes()).padStart(
+          2,
+          "0"
+        )}${String(timestamp.getSeconds()).padStart(2, "0")}_${Math.floor(
+          Math.random() * 1000
+        )}`;
+        const filename = `twitter_${serial}_${idx + 1}.${ext}`;
+  
         try {
-          const res = await fetch(imgUrl);
+          const res = await fetch(url);
           const blob = await res.blob();
-          const filename = `twitter_${baseSerial}_${idx + 1}.jpg`;
           const a = document.createElement("a");
           a.href = URL.createObjectURL(blob);
           a.download = filename;
@@ -144,7 +158,7 @@ export default function App() {
           completed++;
           Swal.update({ html: `${completed} / ${images.length} 완료` });
         } catch (err) {
-          console.error("저장 실패:", imgUrl, err);
+          console.error("저장 실패:", url);
         }
       })
     );
@@ -152,9 +166,9 @@ export default function App() {
     Swal.close();
     Swal.fire({
       icon: "success",
-      title: "모두 저장 완료!",
-      text: `${completed}개의 이미지를 저장했습니다.`,
-      confirmButtonColor: "#1d9bf0",
+      title: "모두 다운로드 완료!",
+      text: `${completed}개의 파일을 저장했습니다.`,
+      confirmButtonColor: "#1d9bf0"
     });
   };
 
@@ -167,7 +181,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <h2>트위터 원본 이미지 다운로더</h2>
+      <h2>트위터 원본 파일 다운로더</h2>
 
       <div className="input-container">
         <input
@@ -177,7 +191,7 @@ export default function App() {
           onChange={(e) => setUrl(e.target.value)}
         />
         <button onClick={handleFetch} disabled={loading}>
-          {loading ? "불러오는 중..." : "이미지 찾기"}
+          {loading ? "불러오는 중..." : "찾기"}
         </button>
         <button className="reset" onClick={handleReset} disabled={loading}>
           🔄 초기화
@@ -192,7 +206,7 @@ export default function App() {
           <div key={idx} className="image-block">
             <img src={img} alt={`tweet_${idx}`} />
             <button onClick={() => handleDownload(img)}>
-              📥 이미지 {idx + 1} 저장
+              📥 저장
             </button>
           </div>
         ))}
