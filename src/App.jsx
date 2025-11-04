@@ -113,51 +113,48 @@ export default function App() {
 
   const handleBulkDownload = async () => {
     if (images.length === 0) {
-      Swal.fire({
-        icon: "info",
-        title: "다운로드할 이미지가 없습니다",
-        confirmButtonColor: "#1d9bf0"
-      });
+      Swal.fire({ icon: "info", title: "다운로드할 이미지가 없습니다" });
       return;
     }
-  
-    let success = 0;
   
     Swal.fire({
       title: "이미지 다운로드 중...",
       html: `0 / ${images.length} 완료`,
       allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
+      didOpen: () => Swal.showLoading(),
     });
   
-    for (let i = 0; i < images.length; i++) {
-      const imgUrl = images[i];
-      const filename = `twitter_${i + 1}.jpg`;
-      try {
-        const res = await fetch(imgUrl);
-        const blob = await res.blob();
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(a.href);
-        success++;
-      } catch (err) {
-        console.error("다운로드 실패:", imgUrl, err);
-      }
+    const timestamp = new Date();
+    const baseSerial = `${timestamp.getFullYear()}${String(timestamp.getMonth() + 1).padStart(2, "0")}${String(timestamp.getDate()).padStart(2, "0")}_${String(timestamp.getHours()).padStart(2, "0")}${String(timestamp.getMinutes()).padStart(2, "0")}${String(timestamp.getSeconds()).padStart(2, "0")}`;
   
-      // SweetAlert 진행률 업데이트
-      Swal.update({
-        html: `${success} / ${images.length} 완료`
-      });
-    }
+    let completed = 0;
+  
+    // ✅ 병렬로 모든 fetch 수행
+    await Promise.all(
+      images.map(async (imgUrl, idx) => {
+        try {
+          const res = await fetch(imgUrl);
+          const blob = await res.blob();
+          const filename = `twitter_${baseSerial}_${idx + 1}.jpg`;
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = filename;
+          a.click();
+          URL.revokeObjectURL(a.href);
+          completed++;
+          Swal.update({ html: `${completed} / ${images.length} 완료` });
+        } catch (err) {
+          console.error("다운로드 실패:", imgUrl, err);
+        }
+      })
+    );
   
     Swal.close();
     Swal.fire({
       icon: "success",
       title: "모두 다운로드 완료!",
-      text: `${success}개의 이미지를 저장했습니다.`,
-      confirmButtonColor: "#1d9bf0"
+      text: `${completed}개의 이미지를 저장했습니다.`,
+      confirmButtonColor: "#1d9bf0",
     });
   };
 
