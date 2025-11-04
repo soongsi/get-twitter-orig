@@ -27,7 +27,7 @@ export default function App() {
     if (!tweetUrlRegex.test(url)) {
       Swal.fire({
         icon: "error",
-        title: "트윗 URL 형식이 올바르지 않습니다.",
+        title: "유효하지 않은 주소입니다.",
         text: "예) https://x.com/TVXQ/status/1234567890",
         confirmButtonColor: "#1d9bf0",
         customClass: { title: "swal-custom-title" },
@@ -36,8 +36,7 @@ export default function App() {
     }
 
     setLoading(true);
-    setError("");
-    setImages([]);
+    setMedias([]);
 
     try {
       // x.com → api.vxtwitter.com 변환
@@ -52,24 +51,24 @@ export default function App() {
         throw new Error("파일을 찾을 수 없습니다.");
       }
 
-      const originals = data.media_extended.map((m) => {
+      const list = data.media_extended.map((m) => {
         let mediaUrl = m.url;
         if (m.type === "photo") {
-          if (mediaUrl.includes("name="))
+          if (mediaUrl.includes("name=")) {
             mediaUrl = mediaUrl.replace(/name=[^&]+/, "name=orig");
-          else {
+          } else {
             const sep = mediaUrl.includes("?") ? "&" : "?";
             mediaUrl = `${mediaUrl}${sep}name=orig`;
           }
         }
-      
+
         return {
           url: mediaUrl,
           type: m.type,
-          thumb: m.thumbnail_url || null
+          thumb: m.thumbnail_url || null,
         };
       });
-      setImages(originals);
+      setMedias(list);
     } catch (err) {
       setError(err.message);
       Swal.fire({
@@ -115,13 +114,14 @@ export default function App() {
         icon: "error",
         title: "저장 실패",
         text: "파일 저장 중 오류가 발생했습니다.",
-        confirmButtonColor: "#1d9bf0"
+        confirmButtonColor: "#1d9bf0",
+        customClass: { title: "swal-custom-title" }
       });
     }
   };
 
   const handleBulkDownload = async () => {
-    if (images.length === 0) {
+    if (medias.length === 0) {
       Swal.fire({ icon: "info", title: "저장할 파일이 없습니다" });
       return;
     }
@@ -132,11 +132,12 @@ export default function App() {
       title: "파일 저장 중...",
       html: `0 / ${images.length} 완료`,
       allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
+      didOpen: () => Swal.showLoading(),
+      customClass: { title: "swal-custom-title" }
     });
   
     await Promise.all(
-      images.map(async (media, idx) => {
+      medias.map(async (media, idx) => {
         const { url, type } = media;
         const ext = type === "video" || type === "animated_gif" ? "mp4" : "jpg";
   
@@ -162,7 +163,7 @@ export default function App() {
           a.click();
           URL.revokeObjectURL(a.href);
           completed++;
-          Swal.update({ html: `${completed} / ${images.length} 완료` });
+          Swal.update({ html: `${completed} / ${medias.length} 완료` });
         } catch (err) {
           console.error("저장 실패:", url);
         }
@@ -180,9 +181,7 @@ export default function App() {
 
   const handleReset = () => {
     setUrl("");
-    setImages([]);
-    setError("");
-    setLoading(false);
+    setMedias([]);
   };
 
   return (
@@ -202,28 +201,51 @@ export default function App() {
         <button className="reset" onClick={handleReset} disabled={loading}>
           🔄 초기화
         </button>
-        <button onClick={handleBulkDownload} disabled={images.length === 0}>
+        <button onClick={handleBulkDownload} disabled={medias.length === 0}>
           📥 모두 저장
         </button>
       </div>
 
       <div className="images">
-        {images.map((media, idx) => (
-          <div key={idx} className="image-block">
-            {media.type === "photo" ? (
-              <img src={media.url} alt={`tweet_${idx}`} />
-            ) : (
-              <video
-                poster={media.thumb} // ✅ 썸네일
-                src={media.url}
-                controls
-              />
-            )}
-            <button onClick={() => handleDownload(media, idx)}>
-              📥 파일 {idx + 1} 다운로드
-            </button>
-          </div>
-        ))}
+        {medias.map((media, idx) => {
+          const isPhoto =
+            media.type?.toLowerCase() === "photo" ||
+            /\.(jpg|jpeg|png)$/i.test(media.url);
+          const isVideo =
+            media.type?.toLowerCase() === "video" || media.url.includes(".mp4");
+          const isGif =
+            media.type?.toLowerCase() === "animated_gif";
+
+          return (
+            <div key={idx} className="image-block">
+              {isPhoto ? (
+                <img src={media.url} alt={`media_${idx}`} />
+              ) : isVideo ? (
+                <video
+                  poster={media.thumb}
+                  src={media.url}
+                  controls={false}
+                  onClick={(e) => (e.target.controls = true)}
+                />
+              ) : isGif ? (
+                <video
+                  poster={media.thumb}
+                  src={media.url}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
+              ) : (
+                <img src={media.thumb || media.url} alt={`media_${idx}`} />
+              )}
+
+              <button onClick={() => handleDownload(media, idx)}>
+                📥 파일 {idx + 1} 다운로드
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
