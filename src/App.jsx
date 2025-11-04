@@ -111,6 +111,56 @@ export default function App() {
     }
   };
 
+  const handleBulkDownload = async () => {
+    if (images.length === 0) {
+      Swal.fire({
+        icon: "info",
+        title: "다운로드할 이미지가 없습니다",
+        confirmButtonColor: "#1d9bf0"
+      });
+      return;
+    }
+  
+    let success = 0;
+  
+    Swal.fire({
+      title: "이미지 다운로드 중...",
+      html: `0 / ${images.length} 완료`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+  
+    for (let i = 0; i < images.length; i++) {
+      const imgUrl = images[i];
+      const filename = `twitter_${i + 1}.jpg`;
+      try {
+        const res = await fetch(imgUrl);
+        const blob = await res.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        success++;
+      } catch (err) {
+        console.error("다운로드 실패:", imgUrl, err);
+      }
+  
+      // SweetAlert 진행률 업데이트
+      Swal.update({
+        html: `${success} / ${images.length} 완료`
+      });
+    }
+  
+    Swal.close();
+    Swal.fire({
+      icon: "success",
+      title: "모두 다운로드 완료!",
+      text: `${success}개의 이미지를 저장했습니다.`,
+      confirmButtonColor: "#1d9bf0"
+    });
+  };
+
   const handleReset = () => {
     setUrl("");
     setImages([]);
@@ -134,6 +184,9 @@ export default function App() {
         </button>
         <button className="reset" onClick={handleReset} disabled={loading}>
           🔄 초기화
+        </button>
+        <button onClick={handleBulkDownload} disabled={images.length === 0}>
+          📥 모두 다운로드
         </button>
       </div>
 
