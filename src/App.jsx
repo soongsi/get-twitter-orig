@@ -4,9 +4,8 @@ import "./App.css";
 
 export default function App() {
   const [url, setUrl] = useState("");
-  const [images, setImages] = useState([]);
+  const [medias, setMedias] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   // ✅ 트윗 URL 정규식 (x.com / twitter.com 모두 허용)
   const tweetUrlRegex = /^(https?:\/\/)?(x|twitter)\.com\/[^\/]+\/status\/\d+/i;
