@@ -51,22 +51,42 @@ export default function App() {
       }
 
       const list = data.media_extended.map((m) => {
-        let mediaUrl = m.url || m.media_url_https || m.media_url;
-        if (m.type === "photo") {
-          if (!/name=/.test(mediaUrl)) {
-            const sep = mediaUrl.includes("?") ? "&" : "?";
-            mediaUrl = `${mediaUrl}${sep}name=orig`;
-          } else {
-            mediaUrl = mediaUrl.replace(/name=[^&]+/, "name=orig");
-          }
-       }
+  let mediaUrl =
+    m.url ||
+    m.media_url_https ||
+    m.media_url ||
+    m.preview_image_url ||
+    m.thumbnail_url ||
+    "";
 
-        return {
-          url: mediaUrl,
-          type: m.type,
-          thumb: m.thumbnail_url || null,
-        };
-      });
+  // ✅ type별 처리 분기
+  if (m.type === "photo") {
+    // 📸 이미지: name=orig 강제 추가
+    if (mediaUrl.startsWith("https://pbs.twimg.com/media/")) {
+      if (/name=/.test(mediaUrl)) {
+        mediaUrl = mediaUrl.replace(/name=[^&]+/, "name=orig");
+      } else {
+        const sep = mediaUrl.includes("?") ? "&" : "?";
+        mediaUrl = `${mediaUrl}${sep}name=orig`;
+      }
+    }
+  } else if (m.type === "video" || m.type === "animated_gif") {
+    // 🎞️ 영상 또는 GIF (트위터는 GIF도 mp4로 제공)
+    // 가장 고화질 variant 선택
+    const variants = m.variants || [];
+    const best = variants
+      .filter((v) => v.content_type === "video/mp4")
+      .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+    if (best && best.url) mediaUrl = best.url;
+  }
+
+  // ✅ 최종 객체 반환
+  return {
+    url: mediaUrl,
+    type: m.type,
+    thumb: m.thumbnail_url || m.preview_image_url || null,
+  };
+});
       setMedias(list);
     } catch (err) {
       setError(err.message);
