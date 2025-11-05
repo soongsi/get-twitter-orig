@@ -50,7 +50,7 @@ export default function App() {
         throw new Error("파일을 찾을 수 없습니다.");
       }
 
-      const list = data.media_extended.map((m) => {
+      const list = (data.media_extended || []).map((m) => {
   let mediaUrl =
     m.url ||
     m.media_url_https ||
@@ -59,20 +59,21 @@ export default function App() {
     m.thumbnail_url ||
     "";
 
-  // ✅ type별 처리 분기
+  // ✅ 1. photo일 때 무조건 name=orig 붙이기
   if (m.type === "photo") {
-    // 📸 이미지: name=orig 강제 추가
-    if (mediaUrl.startsWith("https://pbs.twimg.com/media/")) {
+    if (mediaUrl.includes("pbs.twimg.com/media/")) {
+      // name 파라미터가 없거나 다른 값일 경우 강제 orig
       if (/name=/.test(mediaUrl)) {
         mediaUrl = mediaUrl.replace(/name=[^&]+/, "name=orig");
       } else {
-        const sep = mediaUrl.includes("?") ? "&" : "?";
-        mediaUrl = `${mediaUrl}${sep}name=orig`;
+        // ?가 있든 없든 orig 붙이기
+        mediaUrl += mediaUrl.includes("?") ? "&name=orig" : "?name=orig";
       }
     }
-  } else if (m.type === "video" || m.type === "animated_gif") {
-    // 🎞️ 영상 또는 GIF (트위터는 GIF도 mp4로 제공)
-    // 가장 고화질 variant 선택
+  }
+
+  // ✅ 2. video나 animated_gif일 경우 가장 높은 bitrate 선택
+  else if (m.type === "video" || m.type === "animated_gif") {
     const variants = m.variants || [];
     const best = variants
       .filter((v) => v.content_type === "video/mp4")
@@ -80,7 +81,6 @@ export default function App() {
     if (best && best.url) mediaUrl = best.url;
   }
 
-  // ✅ 최종 객체 반환
   return {
     url: mediaUrl,
     type: m.type,
