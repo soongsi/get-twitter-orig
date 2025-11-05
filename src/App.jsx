@@ -51,15 +51,15 @@ export default function App() {
       }
 
       const list = data.media_extended.map((m) => {
-        let mediaUrl = m.url;
+        let mediaUrl = m.url || m.media_url_https || m.media_url;
         if (m.type === "photo") {
-          if (mediaUrl.includes("name=")) {
-            mediaUrl = mediaUrl.replace(/name=[^&]+/, "name=orig");
-          } else {
+          if (!/name=/.test(mediaUrl)) {
             const sep = mediaUrl.includes("?") ? "&" : "?";
             mediaUrl = `${mediaUrl}${sep}name=orig`;
+          } else {
+            mediaUrl = mediaUrl.replace(/name=[^&]+/, "name=orig");
           }
-        }
+       }
 
         return {
           url: mediaUrl,
