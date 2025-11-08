@@ -163,65 +163,6 @@ export default function App() {
 
         const timestamp = new Date();
         const serial = `${timestamp.getFullYear()}${String(
-          timestamp.getMonth() + 1.11
-        ).padStart(2, "0")}${String(timestamp.getDate()).padStart(
-          2,
-          "0"
-        )}_${String(timestamp.getHours()).padStart(2, "0")}${String(
-          timestamp.getMinutes()
-        ).padStart(2, "0")}${String(timestamp.getSeconds()).padStart(
-          2,
-          "0"
-        )}_${Math.floor(Math.random() * 1000)}`;
-        const filename = `twitter_${serial}_${idx + 1}.${ext}`;
-
-        try {
-          const res = await fetch(url);
-          const blob = await res.blob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    } catch {
-      Swal.fire({
-        icon: "error",
-        title: "다운로드 실패",
-        text: "파일 저장 중 오류가 발생했습니다.",
-        confirmButtonColor: "#1d9bf0",
-      });
-    }
-  };
-
-  // ===================================================
-  // 📦 모두 다운로드 (Promise.all 병렬 처리)
-  // ===================================================
-  const handleBulkDownload = async () => {
-    if (medias.length === 0) {
-      Swal.fire({
-        icon: "info",
-        title: "다운로드할 파일이 없습니다",
-        confirmButtonColor: "#1d9bf0",
-      });
-      return;
-    }
-
-    Swal.fire({
-      title: "파일 다운로드 중...",
-      html: `0 / ${medias.length} 완료`,
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-    });
-
-    let completed = 0;
-
-    await Promise.all(
-      medias.map(async (media, idx) => {
-        const { url, type } = media;
-        const ext = type === "video" || type === "animated_gif" ? "mp4" : "jpg";
-
-        const timestamp = new Date();
-        const serial = `${timestamp.getFullYear()}${String(
           timestamp.getMonth() + 1
         ).padStart(2, "0")}${String(timestamp.getDate()).padStart(
           2,
@@ -317,4 +258,4 @@ export default function App() {
       </div>
     </div>
   );
-         
+}
