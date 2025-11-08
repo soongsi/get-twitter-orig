@@ -50,43 +50,23 @@ export default function App() {
         throw new Error("파일을 찾을 수 없습니다.");
       }
 
-      const list = (data.media_extended || []).map((m) => {
-  let mediaUrl =
-    m.url ||
-    m.media_url_https ||
-    m.media_url ||
-    m.preview_image_url ||
-    m.thumbnail_url ||
-    "";
+      const list = data.media_extended.map((m) => {
+        let mediaUrl = m.url;
+        if (m.type === "photo") {
+          if (mediaUrl.includes("name=")) {
+            mediaUrl = mediaUrl.replace(/name=[^&]+/, "name=orig");
+          } else {
+            const sep = mediaUrl.includes("?") ? "&" : "?";
+            mediaUrl = `${mediaUrl}${sep}name=orig`;
+          }
+        }
 
-  // ✅ 1. photo일 때 무조건 name=orig 붙이기
-  if (m.type === "photo") {
-    if (mediaUrl.includes("pbs.twimg.com/media/")) {
-      // name 파라미터가 없거나 다른 값일 경우 강제 orig
-      if (/name=/.test(mediaUrl)) {
-        mediaUrl = mediaUrl.replace(/name=[^&]+/, "name=orig");
-      } else {
-        // ?가 있든 없든 orig 붙이기
-        mediaUrl += mediaUrl.includes("?") ? "&name=orig" : "?name=orig";
-      }
-    }
-  }
-
-  // ✅ 2. video나 animated_gif일 경우 가장 높은 bitrate 선택
-  else if (m.type === "video" || m.type === "animated_gif") {
-    const variants = m.variants || [];
-    const best = variants
-      .filter((v) => v.content_type === "video/mp4")
-      .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
-    if (best && best.url) mediaUrl = best.url;
-  }
-
-  return {
-    url: mediaUrl,
-    type: m.type,
-    thumb: m.thumbnail_url || m.preview_image_url || null,
-  };
-});
+        return {
+          url: mediaUrl,
+          type: m.type,
+          thumb: m.thumbnail_url || null,
+        };
+      });
       setMedias(list);
     } catch (err) {
       setError(err.message);
