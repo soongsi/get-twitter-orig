@@ -7,7 +7,6 @@ export default function App() {
   const [medias, setMedias] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // ✅ 트윗 URL 정규식
   const tweetUrlRegex = /^(https?:\/\/)?(x|twitter)\.com\/[^\/]+\/status\/\d+/i;
 
   // ===================================================
@@ -44,46 +43,43 @@ export default function App() {
       const res = await fetch(apiUrl);
       const data = await res.json();
 
-      if (!data.media_extended || data.media_extended.length === 0) {
-        throw new Error("이미지를 찾을 수 없습니다.");
+      // ✅ VxTwitter 최신 응답 구조 대응
+      let mediaList = [];
+
+      if (data.media_extended && data.media_extended.length > 0) {
+        mediaList = data.media_extended.map((m) => m.url);
+      } else if (data.media && data.media.length > 0) {
+        mediaList = data.media;
+      } else if (data.media_urls && data.media_urls.length > 0) {
+        mediaList = data.media_urls;
       }
 
-      const list = data.media_extended.map((m) => {
-        // ✅ 1. URL 후보 가져오기
-        let mediaUrl =
-          m.url ||
-          m.media_url_https ||
-          m.media_url ||
-          m.preview_image_url ||
-          m.thumbnail_url ||
-          "";
+      if (!mediaList.length) throw new Error("미디어를 찾을 수 없습니다.");
 
-        // ✅ 2. PHOTO: 무조건 name=orig 붙이기
-        if (m.type === "photo" && mediaUrl.includes("pbs.twimg.com/media/")) {
-          // name 파라미터가 있든 없든 모두 orig로 통일
-          mediaUrl = mediaUrl.replace(/(\?|\&)?name=[^&]+/, "");
-          const sep = mediaUrl.includes("?") ? "&" : "?";
-          mediaUrl = `${mediaUrl}${sep}name=orig`;
+      // ✅ URL 정제 처리
+      const finalList = mediaList.map((url) => {
+        let finalUrl = url;
+
+        // 📸 이미지 → name=orig 강제
+        if (finalUrl.includes("pbs.twimg.com/media/")) {
+          finalUrl = finalUrl.replace(/(\?|\&)?name=[^&]+/, "");
+          const sep = finalUrl.includes("?") ? "&" : "?";
+          finalUrl = `${finalUrl}${sep}name=orig`;
         }
 
-        // ✅ 3. VIDEO / ANIMATED_GIF: 최고 화질 variant 선택
-        if (m.type === "video" || m.type === "animated_gif") {
-          const variants = m.variants || [];
-          const best = variants
-            .filter((v) => v.content_type === "video/mp4")
-            .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
-          if (best && best.url) mediaUrl = best.url;
-        }
+        // 🎞️ 비디오 / GIF
+        const type = finalUrl.includes("video.twimg.com")
+          ? "video"
+          : "photo";
 
-        // ✅ 4. 결과 반환
         return {
-          url: mediaUrl,
-          type: m.type,
-          thumb: m.thumbnail_url || m.preview_image_url || null,
+          url: finalUrl,
+          type,
+          thumb: finalUrl,
         };
       });
 
-      setMedias(list);
+      setMedias(finalList);
     } catch (err) {
       Swal.fire({
         icon: "error",
@@ -100,42 +96,11 @@ export default function App() {
   // 💾 단일 다운로드
   // ===================================================
   const handleDownload = async (media, idx) => {
-    const { url, type } = media;
-    const ext = type === "video" || type === "animated_gif" ? "mp4" : "jpg";
-
-    const timestamp = new Date();
-    const serial = `${timestamp.getFullYear()}${String(
-      timestamp.getMonth() + 1
-    ).padStart(2, "0")}${String(timestamp.getDate()).padStart(2, "0")}_${String(
-      timestamp.getHours()
-    ).padStart(2, "0")}${String(timestamp.getMinutes()).padStart(
-      2,
-      "0"
-    )}${String(timestamp.getSeconds()).padStart(2, "0")}_${Math.floor(
-      Math.random() * 1000
-    )}`;
-    const filename = `twitter_${serial}_${idx + 1}.${ext}`;
-
-    try {
-      const res = await fetch(url);
-      const blob = await res.blob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    } catch {
-      Swal.fire({
-        icon: "error",
-        title: "다운로드 실패",
-        text: "파일 저장 중 오류가 발생했습니다.",
-        confirmButtonColor: "#1d9bf0",
-      });
-    }
+    await downloadFile(media, idx);
   };
 
   // ===================================================
-  // 📦 모두 다운로드 (Promise.all 병렬 처리)
+  // 📦 모두 다운로드 (Promise.all 병렬)
   // ===================================================
   const handleBulkDownload = async () => {
     if (medias.length === 0) {
@@ -158,35 +123,12 @@ export default function App() {
 
     await Promise.all(
       medias.map(async (media, idx) => {
-        const { url, type } = media;
-        const ext = type === "video" || type === "animated_gif" ? "mp4" : "jpg";
-
-        const timestamp = new Date();
-        const serial = `${timestamp.getFullYear()}${String(
-          timestamp.getMonth() + 1
-        ).padStart(2, "0")}${String(timestamp.getDate()).padStart(
-          2,
-          "0"
-        )}_${String(timestamp.getHours()).padStart(2, "0")}${String(
-          timestamp.getMinutes()
-        ).padStart(2, "0")}${String(timestamp.getSeconds()).padStart(
-          2,
-          "0"
-        )}_${Math.floor(Math.random() * 1000)}`;
-        const filename = `twitter_${serial}_${idx + 1}.${ext}`;
-
         try {
-          const res = await fetch(url);
-          const blob = await res.blob();
-          const a = document.createElement("a");
-          a.href = URL.createObjectURL(blob);
-          a.download = filename;
-          a.click();
-          URL.revokeObjectURL(a.href);
+          await downloadFile(media, idx);
           completed++;
           Swal.update({ html: `${completed} / ${medias.length} 완료` });
-        } catch (err) {
-          console.error("다운로드 실패:", url);
+        } catch (e) {
+          console.error("다운로드 실패:", e);
         }
       })
     );
@@ -198,6 +140,35 @@ export default function App() {
       text: `${completed}개의 파일을 저장했습니다.`,
       confirmButtonColor: "#1d9bf0",
     });
+  };
+
+  // ===================================================
+  // 📥 공통 다운로드 함수
+  // ===================================================
+  const downloadFile = async (media, idx) => {
+    const { url, type } = media;
+    const ext = type === "video" ? "mp4" : "jpg";
+
+    const timestamp = new Date();
+    const serial = `${timestamp.getFullYear()}${String(
+      timestamp.getMonth() + 1
+    ).padStart(2, "0")}${String(timestamp.getDate()).padStart(2, "0")}_${String(
+      timestamp.getHours()
+    ).padStart(2, "0")}${String(timestamp.getMinutes()).padStart(
+      2,
+      "0"
+    )}${String(timestamp.getSeconds()).padStart(2, "0")}_${Math.floor(
+      Math.random() * 1000
+    )}`;
+    const filename = `twitter_${serial}_${idx + 1}.${ext}`;
+
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
 
   // ===================================================
@@ -237,19 +208,14 @@ export default function App() {
         {medias.map((media, idx) => (
           <div key={idx} className="image-block">
             {media.type === "photo" ? (
-              <img src={media.url} alt={`media_${idx}`} />
-            ) : media.type === "video" ? (
-              <video poster={media.thumb} src={media.url} controls />
-            ) : media.type === "animated_gif" ? (
+              <img src={media.thumb} alt={`media_${idx}`} />
+            ) : (
               <video
+                poster={media.thumb}
                 src={media.url}
-                autoPlay
-                loop
-                muted
-                playsInline
+                controls
               />
-            ) : null}
-
+            )}
             <button onClick={() => handleDownload(media, idx)}>
               📥 파일 {idx + 1} 다운로드
             </button>
@@ -258,4 +224,4 @@ export default function App() {
       </div>
     </div>
   );
-}
+            }
