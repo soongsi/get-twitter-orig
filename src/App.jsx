@@ -18,6 +18,7 @@ export default function App() {
         icon: "warning",
         title: "트윗 URL을 입력해주세요",
         confirmButtonColor: "#1d9bf0",
+        customClass: { title: "swal-custom-title" },
       });
       return;
     }
@@ -28,6 +29,7 @@ export default function App() {
         title: "유효하지 않은 주소입니다",
         text: "예: https://x.com/TVXQ/status/1234567890",
         confirmButtonColor: "#1d9bf0",
+        customClass: { title: "swal-custom-title" },
       });
       return;
     }
@@ -86,6 +88,7 @@ export default function App() {
         title: "에러 발생 😢",
         text: err.message,
         confirmButtonColor: "#1d9bf0",
+        customClass: { title: "swal-custom-title" },
       });
     } finally {
       setLoading(false);
@@ -108,6 +111,7 @@ export default function App() {
         icon: "info",
         title: "다운로드할 파일이 없습니다",
         confirmButtonColor: "#1d9bf0",
+        customClass: { title: "swal-custom-title" },
       });
       return;
     }
