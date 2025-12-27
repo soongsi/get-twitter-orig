@@ -13,148 +13,87 @@ export default function App() {
   // 📸 트윗 미디어 불러오기
   // ===================================================
   const handleFetch = async () => {
-  if (!url.trim()) {
-    Swal.fire({
-      icon: "warning",
-      title: "트윗 URL을 입력해주세요",
-      confirmButtonColor: "#1d9bf0",
-      customClass: { title: "swal-custom-title" },
-    });
-    return;
-  }
-
-  // ✅ 어떤 형태든 status/트윗ID 뽑기 (x.com/i/status, x.com/i/web/status 다 대응)
-  const idMatch = url.match(/status\/(\d+)/i);
-  const tweetId = idMatch?.[1];
-
-  if (!tweetId) {
-    Swal.fire({
-      icon: "error",
-      title: "유효하지 않은 트윗 주소입니다",
-      text: "status/뒤에 숫자 ID가 포함된 주소인지 확인해주세요.",
-      confirmButtonColor: "#1d9bf0",
-      customClass: { title: "swal-custom-title" },
-    });
-    return;
-  }
-
-  setLoading(true);
-  setMedias([]);
-
-  try {
-    // =========================
-    // 1) HTML(AllOrigins)로 이미지 먼저 시도
-    // =========================
-    let html = "";
-    try {
-      const htmlRes = await fetch(
-        `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
-      );
-      const htmlData = await htmlRes.json();
-      html = htmlData?.contents || "";
-    } catch (e) {
-      // AllOrigins 실패는 흔함 → 아래에서 Vx로 커버
-      html = "";
+    if (!url.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "트윗 URL을 입력해주세요",
+        confirmButtonColor: "#1d9bf0",
+        customClass: { title: "swal-custom-title" },
+      });
+      return;
     }
 
-    // 📸 이미지 추출 (pbs.twimg.com/media/...)
-    const imageMatches = [
-      ...html.matchAll(/https:\/\/pbs\.twimg\.com\/media\/[^\s"'<>]+/g),
-    ];
-    const images = [...new Set(imageMatches.map((m) => {
-      let u = m[0].replace(/(\?|\&)?name=[^&]+/, "");
-      return u.includes("?") ? u + "&name=orig" : u + "?name=orig";
-    }))];
+    if (!tweetUrlRegex.test(url)) {
+      Swal.fire({
+        icon: "error",
+        title: "유효하지 않은 주소입니다",
+        text: "예: https://x.com/TVXQ/status/1234567890",
+        confirmButtonColor: "#1d9bf0",
+        customClass: { title: "swal-custom-title" },
+      });
+      return;
+    }
 
-    // 🎞️ 영상 힌트 (HTML에 video.twimg.com은 잘 안 나옴 → 메타로 판단)
-    const looksLikeVideo =
-      /property="og:video"|name="twitter:player"|twitter:player/i.test(html);
+    setLoading(true);
+    setMedias([]);
 
-    // ✅ Vx 호출 조건:
-    // - HTML에서 이미지 못 찾음
-    // - 또는 영상 힌트 있음
-    // - 또는 HTML이 비어있음(= AllOrigins가 제대로 못 가져옴)
-    const shouldCallVx = images.length === 0 || looksLikeVideo || !html;
+    try {
+      const apiUrl = url
+        .replace("twitter.com", "api.vxtwitter.com")
+        .replace("x.com", "api.vxtwitter.com");
 
-    let vxMedias = [];
+      const res = await fetch(apiUrl);
+      const data = await res.json();
 
-    if (shouldCallVx) {
-      // =========================
-      // 2) 필요할 때만 Vx 호출 (영상/이미지 둘 다 여기서 커버)
-      // =========================
-      const vxUrl = `https://api.vxtwitter.com/i/status/${tweetId}`;
-      const vxRes = await fetch(vxUrl);
-      const vxData = await vxRes.json();
-
-      // Vx 응답 구조 대응 (media_extended / media / media_urls)
+      // ✅ VxTwitter 최신 응답 구조 대응
       let mediaList = [];
 
-      if (vxData.media_extended && vxData.media_extended.length > 0) {
-        // media_extended는 객체일 수도/문자열일 수도 있어서 안전 처리
-        mediaList = vxData.media_extended.map((m) => (typeof m === "string" ? m : m.url)).filter(Boolean);
-      } else if (vxData.media && vxData.media.length > 0) {
-        mediaList = vxData.media;
-      } else if (vxData.media_urls && vxData.media_urls.length > 0) {
-        mediaList = vxData.media_urls;
+      if (data.media_extended && data.media_extended.length > 0) {
+        mediaList = data.media_extended.map((m) => m.url);
+      } else if (data.media && data.media.length > 0) {
+        mediaList = data.media;
+      } else if (data.media_urls && data.media_urls.length > 0) {
+        mediaList = data.media_urls;
       }
 
-      vxMedias = mediaList.map((link) => {
-        let finalUrl = link;
+      if (!mediaList.length) throw new Error("미디어를 찾을 수 없습니다.");
 
-        // 이미지면 orig 강제
+      // ✅ URL 정제 처리
+      const finalList = mediaList.map((url) => {
+        let finalUrl = url;
+
+        // 📸 이미지 → name=orig 강제
         if (finalUrl.includes("pbs.twimg.com/media/")) {
           finalUrl = finalUrl.replace(/(\?|\&)?name=[^&]+/, "");
           const sep = finalUrl.includes("?") ? "&" : "?";
           finalUrl = `${finalUrl}${sep}name=orig`;
-          return { url: finalUrl, type: "photo", thumb: finalUrl };
         }
 
-        // 비디오면 그대로(mp4)
-        if (finalUrl.includes("video.twimg.com")) {
-          return { url: finalUrl, type: "video", thumb: null };
-        }
+        // 🎞️ 비디오 / GIF
+        const type = finalUrl.includes("video.twimg.com")
+          ? "video"
+          : "photo";
 
-        // 기타는 photo 취급
-        return { url: finalUrl, type: "photo", thumb: finalUrl };
+        return {
+          url: finalUrl,
+          type,
+          thumb: finalUrl,
+        };
       });
+
+      setMedias(finalList);
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "에러 발생 😢",
+        text: err.message,
+        confirmButtonColor: "#1d9bf0",
+        customClass: { title: "swal-custom-title" },
+      });
+    } finally {
+      setLoading(false);
     }
-
-    // =========================
-    // 3) 최종 병합 (중복 제거)
-    // =========================
-    const merged = [
-      ...images.map((u) => ({ url: u, type: "photo", thumb: u })),
-      ...vxMedias,
-    ];
-
-    // url 기준 중복 제거
-    const uniq = [];
-    const seen = new Set();
-    for (const m of merged) {
-      if (!m?.url) continue;
-      if (seen.has(m.url)) continue;
-      seen.add(m.url);
-      uniq.push(m);
-    }
-
-    if (uniq.length === 0) throw new Error("미디어를 찾을 수 없습니다.");
-
-    setMedias(uniq);
-  } catch (err) {
-    Swal.fire({
-      icon: "error",
-      title: "에러 발생 😢",
-      text: err?.message || "미디어를 불러올 수 없습니다.",
-      confirmButtonColor: "#1d9bf0",
-      customClass: { title: "swal-custom-title" },
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-  
-
-      
+  };
 
   // ===================================================
   // 💾 단일 다운로드
