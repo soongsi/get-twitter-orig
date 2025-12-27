@@ -38,48 +38,75 @@ export default function App() {
     setMedias([]);
 
     try {
-      const apiUrl = url
-        .replace("twitter.com", "api.vxtwitter.com")
-        .replace("x.com", "api.vxtwitter.com");
+      // ===================================================
+      // 1️⃣ AllOrigins로 HTML 가져오기 (이미지 + 영상 여부 판단)
+      // ===================================================
+      const htmlRes = await fetch(
+        `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
+      );
+      const htmlData = await htmlRes.json();
+      const html = htmlData.contents || "";
 
-      const res = await fetch(apiUrl);
-      const data = await res.json();
+      // 📸 이미지 추출
+      const imageMatches = [
+        ...html.matchAll(/https:\/\/pbs\.twimg\.com\/media\/[^\s"'<>]+/g),
+      ];
 
-      // ✅ VxTwitter 최신 응답 구조 대응
-      let mediaList = [];
+      const images = [...new Set(imageMatches.map((m) => {
+        let u = m[0].replace(/(\?|\&)?name=[^&]+/, "");
+        return u.includes("?") ? u + "&name=orig" : u + "?name=orig";
+      }))];
 
-      if (data.media_extended && data.media_extended.length > 0) {
-        mediaList = data.media_extended.map((m) => m.url);
-      } else if (data.media && data.media.length > 0) {
-        mediaList = data.media;
-      } else if (data.media_urls && data.media_urls.length > 0) {
-        mediaList = data.media_urls;
+      // 🎞️ 영상 존재 여부 판단
+      const hasVideo = /video\.twimg\.com/.test(html);
+
+      let videos = [];
+
+      // ===================================================
+      // 2️⃣ 영상이 있을 때만 VxTwitter 호출
+      // ===================================================
+      if (hasVideo) {
+        const vxUrl = url
+          .replace("twitter.com", "api.vxtwitter.com")
+          .replace("x.com", "api.vxtwitter.com");
+
+        const vxRes = await fetch(vxUrl);
+        const vxData = await vxRes.json();
+
+        if (vxData.media_extended) {
+          vxData.media_extended.forEach((m) => {
+            if (m.type === "video" || m.type === "animated_gif") {
+              const best = m.variants
+                ?.filter((v) => v.content_type === "video/mp4")
+                .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+
+              if (best?.url) {
+                videos.push(best.url);
+              }
+            }
+          });
+        }
       }
 
-      if (!mediaList.length) throw new Error("미디어를 찾을 수 없습니다.");
+      if (!images.length && !videos.length) {
+        throw new Error("미디어를 찾을 수 없습니다.");
+      }
 
-      // ✅ URL 정제 처리
-      const finalList = mediaList.map((url) => {
-        let finalUrl = url;
-
-        // 📸 이미지 → name=orig 강제
-        if (finalUrl.includes("pbs.twimg.com/media/")) {
-          finalUrl = finalUrl.replace(/(\?|\&)?name=[^&]+/, "");
-          const sep = finalUrl.includes("?") ? "&" : "?";
-          finalUrl = `${finalUrl}${sep}name=orig`;
-        }
-
-        // 🎞️ 비디오 / GIF
-        const type = finalUrl.includes("video.twimg.com")
-          ? "video"
-          : "photo";
-
-        return {
-          url: finalUrl,
-          type,
-          thumb: finalUrl,
-        };
-      });
+      // ===================================================
+      // 3️⃣ medias 배열로 통합
+      // ===================================================
+      const finalList = [
+        ...images.map((u) => ({
+          url: u,
+          type: "photo",
+          thumb: u,
+        })),
+        ...videos.map((u) => ({
+          url: u,
+          type: "video",
+          thumb: null,
+        })),
+      ];
 
       setMedias(finalList);
     } catch (err) {
@@ -96,58 +123,7 @@ export default function App() {
   };
 
   // ===================================================
-  // 💾 단일 다운로드
-  // ===================================================
-  const handleDownload = async (media, idx) => {
-    await downloadFile(media, idx);
-  };
-
-  // ===================================================
-  // 📦 모두 다운로드 (Promise.all 병렬)
-  // ===================================================
-  const handleBulkDownload = async () => {
-    if (medias.length === 0) {
-      Swal.fire({
-        icon: "info",
-        title: "다운로드할 파일이 없습니다",
-        confirmButtonColor: "#1d9bf0",
-        customClass: { title: "swal-custom-title" },
-      });
-      return;
-    }
-
-    Swal.fire({
-      title: "파일 다운로드 중...",
-      html: `0 / ${medias.length} 완료`,
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-    });
-
-    let completed = 0;
-
-    await Promise.all(
-      medias.map(async (media, idx) => {
-        try {
-          await downloadFile(media, idx);
-          completed++;
-          Swal.update({ html: `${completed} / ${medias.length} 완료` });
-        } catch (e) {
-          console.error("다운로드 실패:", e);
-        }
-      })
-    );
-
-    Swal.close();
-    Swal.fire({
-      icon: "success",
-      title: "모두 다운로드 완료!",
-      text: `${completed}개의 파일을 저장했습니다.`,
-      confirmButtonColor: "#1d9bf0",
-    });
-  };
-
-  // ===================================================
-  // 📥 공통 다운로드 함수
+  // 📥 공통 다운로드
   // ===================================================
   const downloadFile = async (media, idx) => {
     const { url, type } = media;
@@ -176,11 +152,35 @@ export default function App() {
   };
 
   // ===================================================
-  // ♻️ 초기화
+  // 📦 모두 다운로드
   // ===================================================
-  const handleReset = () => {
-    setUrl("");
-    setMedias([]);
+  const handleBulkDownload = async () => {
+    if (!medias.length) return;
+
+    let completed = 0;
+
+    Swal.fire({
+      title: "파일 다운로드 중...",
+      html: `0 / ${medias.length} 완료`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+
+    await Promise.all(
+      medias.map(async (m, i) => {
+        await downloadFile(m, i);
+        completed++;
+        Swal.update({ html: `${completed} / ${medias.length} 완료` });
+      })
+    );
+
+    Swal.close();
+    Swal.fire({
+      icon: "success",
+      title: "모두 다운로드 완료!",
+      text: `${completed}개의 파일을 저장했습니다.`,
+      confirmButtonColor: "#1d9bf0",
+    });
   };
 
   // ===================================================
@@ -200,32 +200,25 @@ export default function App() {
         <button onClick={handleFetch} disabled={loading}>
           {loading ? "불러오는 중..." : "불러오기"}
         </button>
-        <button onClick={handleBulkDownload} disabled={medias.length === 0}>
+        <button onClick={handleBulkDownload} disabled={!medias.length}>
           📥 모두 다운로드
-        </button>
-        <button className="reset" onClick={handleReset} disabled={loading}>
-          🔄 초기화
         </button>
       </div>
 
       <div className="images">
-        {medias.map((media, idx) => (
-          <div key={idx} className="image-block">
-            {media.type === "photo" ? (
-              <img src={media.thumb} alt={`media_${idx}`} />
+        {medias.map((m, i) => (
+          <div key={i} className="image-block">
+            {m.type === "photo" ? (
+              <img src={m.url} alt={`media_${i}`} />
             ) : (
-              <video
-                poster={media.thumb}
-                src={media.url}
-                controls
-              />
+              <video src={m.url} controls />
             )}
-            <button onClick={() => handleDownload(media, idx)}>
-              📥 파일 {idx + 1} 다운로드
+            <button onClick={() => downloadFile(m, i)}>
+              📥 파일 {i + 1} 다운로드
             </button>
           </div>
         ))}
       </div>
     </div>
   );
-            }
+    }
