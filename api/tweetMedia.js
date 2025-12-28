@@ -34,78 +34,64 @@ export default async function handler(req, res) {
 
     const data = await vxRes.json();
     const medias = [];
+    const seen = new Set();
 
+    /* ======================
+       1️⃣ media_extended
+    ====================== */
     if (Array.isArray(data.media_extended)) {
       data.media_extended.forEach((m) => {
-        /* ======================
-           📸 PHOTO
-        ====================== */
+        // PHOTO
         if (m.type === "photo") {
           const raw = m.url || m.media_url_https || m.media_url;
-          if (!raw) return;
+          if (!raw || seen.has(raw)) return;
+          seen.add(raw);
 
-          // 다운로드용 (orig)
-          let orig = raw.replace(/(\?|\&)?name=[^&]+/, "");
-          orig = orig.includes("?") ? orig + "&name=orig" : orig + "?name=orig";
-
-          // 미리보기용 (large)
-          let preview = raw.replace(/(\?|\&)?name=[^&]+/, "");
-          preview = preview.includes("?")
-            ? preview + "&name=large"
-            : preview + "?name=large";
-
+          const base = raw.replace(/(\?|\&)?name=[^&]+/, "");
           medias.push({
             type: "photo",
-            url: orig,        // 다운로드용
-            thumb: preview,   // 미리보기용
+            thumb: base + "?name=large",
+            url: base + "?name=orig",
           });
-          return;
         }
 
-        /* ======================
-           🎞️ VIDEO (direct mp4 / amplify)
-        ====================== */
-        if ((m.type === "video" || m.type === "animated_gif") && m.url) {
-          if (m.url.includes("video.twimg.com")) {
+        // VIDEO / GIF
+        if ((m.type === "video" || m.type === "animated_gif")) {
+          if (m.url && m.url.includes("video.twimg.com")) {
+            if (seen.has(m.url)) return;
+            seen.add(m.url);
+
             medias.push({
               type: "video",
               url: m.url,
               thumb: m.thumbnail_url || null,
             });
-            return;
           }
-        }
-
-        /* ======================
-           🎞️ VIDEO (variants)
-        ====================== */
-        if (
-          (m.type === "video" || m.type === "animated_gif") &&
-          Array.isArray(m.variants)
-        ) {
-          const mp4s = m.variants.filter(
-            (v) => v.content_type === "video/mp4" && v.url
-          );
-          if (!mp4s.length) return;
-
-          const best = mp4s.sort(
-            (a, b) => (b.bitrate || 0) - (a.bitrate || 0)
-          )[0];
-
-          medias.push({
-            type: "video",
-            url: best.url,
-            thumb:
-              m.thumbnail_url ||
-              m.media_url_https ||
-              m.media_url ||
-              null,
-          });
         }
       });
     }
 
-    res.status(200).json({ tweetId, medias });
+    /* ======================
+       2️⃣ mediaURLs (mixed media 핵심)
+    ====================== */
+    if (Array.isArray(data.mediaURLs)) {
+      data.mediaURLs.forEach((u) => {
+        if (!u || seen.has(u)) return;
+        seen.add(u);
+
+        const base = u.replace(/(\?|\&)?name=[^&]+/, "");
+        medias.push({
+          type: "photo",
+          thumb: base + "?name=large",
+          url: base + "?name=orig",
+        });
+      });
+    }
+
+    res.status(200).json({
+      tweetId,
+      medias,
+    });
   } catch (e) {
     res.status(500).json({ error: "server error", detail: e.message });
   }
