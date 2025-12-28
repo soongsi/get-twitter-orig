@@ -110,7 +110,8 @@ export default function App() {
         if (!data.medias || data.medias.length === 0) {
           throw new Error("다운로드 가능한 미디어가 없습니다.");
         }
-    
+
+        console.log("medias from server:", data.medias);
         setMedias(data.medias);
       } catch (e) {
         Swal.fire({
