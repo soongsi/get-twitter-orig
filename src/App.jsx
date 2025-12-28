@@ -93,51 +93,36 @@ export default function App() {
   // 📸 미디어 불러오기
   // =========================
   const handleFetch = async () => {
-    if (!url.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "트윗 URL을 입력해주세요",
-        confirmButtonColor: "#1d9bf0",
-      });
-      return;
-    }
-
-    const tweetId = extractTweetId(url);
-    if (!tweetId) {
-      Swal.fire({
-        icon: "error",
-        title: "유효하지 않은 트윗 주소입니다",
-        text: "status/숫자 형태의 주소인지 확인해주세요.",
-        confirmButtonColor: "#1d9bf0",
-      });
-      return;
-    }
-
-    setLoading(true);
-    setMedias([]);
-
-    try {
-      const res = await fetch(`/api/vxProxy?tweetId=${tweetId}`);
-      const data = await res.json();
-
-      const parsed = parseVxMedia(data);
-
-      if (parsed.length === 0) {
-        throw new Error("다운로드 가능한 미디어가 없습니다.");
+      if (!url.trim()) {
+        Swal.fire({ icon: "warning", title: "트윗 URL을 입력해주세요" });
+        return;
       }
-
-      setMedias(parsed);
-    } catch (err) {
-      Swal.fire({
-        icon: "error",
-        title: "에러 발생 😢",
-        text: err.message || "미디어를 불러올 수 없습니다.",
-        confirmButtonColor: "#1d9bf0",
-      });
-    } finally {
-      setLoading(false);
-    }
+    
+      setLoading(true);
+      setMedias([]);
+    
+      try {
+        const res = await fetch(
+          `/api/tweetMedia?url=${encodeURIComponent(url)}`
+        );
+        const data = await res.json();
+    
+        if (!data.medias || data.medias.length === 0) {
+          throw new Error("다운로드 가능한 미디어가 없습니다.");
+        }
+    
+        setMedias(data.medias);
+      } catch (e) {
+        Swal.fire({
+          icon: "error",
+          title: "에러 발생 😢",
+          text: e.message,
+        });
+      } finally {
+        setLoading(false);
+      }
   };
+
 
   // =========================
   // 📥 다운로드
