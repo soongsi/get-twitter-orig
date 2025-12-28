@@ -14,33 +14,6 @@ export default function App() {
     return match ? match[1] : null;
   };
 
-  const fetchImagesFromAllOrigins = async (tweetUrl) => {
-    try {
-      const res = await fetch(
-        `https://api.allorigins.win/get?url=${encodeURIComponent(tweetUrl)}`
-      );
-      const data = await res.json();
-      const html = data?.contents || "";
-  
-      if (!html) return [];
-  
-      const matches = [
-        ...html.matchAll(/https:\/\/pbs\.twimg\.com\/media\/[^\s"'<>]+/g),
-      ];
-  
-      return [...new Set(matches.map((m) => {
-        let u = m[0].replace(/(\?|\&)?name=[^&]+/, "");
-        return u.includes("?") ? u + "&name=orig" : u + "?name=orig";
-      }))].map((u) => ({
-        url: u,
-        type: "photo",
-        thumb: u,
-      }));
-    } catch {
-      return [];
-    }
-  };
-
   // ===================================================
   // 📸 트윗 미디어 불러오기
   // ===================================================
@@ -119,18 +92,12 @@ export default function App() {
           // Vx 실패 → 아래에서 백업
         }
     
-        // =========================
-        // 2️⃣ Vx 결과 없으면 이미지 백업
-        // =========================
         if (medias.length === 0) {
-          const backupImages = await fetchImagesFromAllOrigins(url);
-          medias = backupImages;
+          throw new Error(
+            "이 트윗은 외부 미디어를 가져올 수 없습니다.\n(비공개·삭제·차단 가능)"
+          );
         }
-    
-        if (medias.length === 0) {
-          throw new Error("미디어를 찾을 수 없습니다.");
-        }
-    
+
         setMedias(medias);
       } catch (err) {
         Swal.fire({
