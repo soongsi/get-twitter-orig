@@ -86,7 +86,7 @@ button:disabled {
 }
 
 img {
-  max-width: 480px;
+  max-width: 380px;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   margin-bottom: 10px;
