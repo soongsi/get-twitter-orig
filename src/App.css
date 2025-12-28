@@ -87,7 +87,6 @@ button:disabled {
 
 img {
   max-width: 480px;
-  width: 90%;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   margin-bottom: 10px;
@@ -104,9 +103,6 @@ img {
   button {
     width: 90%;
     font-size: 14px;
-  }
-  img {
-    max-width: 95vw;
   }
 }
 
