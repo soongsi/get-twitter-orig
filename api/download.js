@@ -1,8 +1,13 @@
+export const config = {
+  runtime: "nodejs",
+};
+
 export default async function handler(req, res) {
   const { url, filename } = req.query;
 
   if (!url) {
-    return res.status(400).send("url required");
+    res.status(400).send("url required");
+    return;
   }
 
   try {
@@ -12,8 +17,16 @@ export default async function handler(req, res) {
       },
     });
 
+    // ✅ 응답 자체 실패
     if (!response.ok) {
-      return res.status(500).send("Failed to fetch media");
+      res.status(500).send("Failed to fetch media");
+      return;
+    }
+
+    // ✅ body 없음 방어
+    if (!response.body) {
+      res.status(500).send("No response body");
+      return;
     }
 
     const contentType =
@@ -25,9 +38,10 @@ export default async function handler(req, res) {
       `attachment; filename="${filename || "media"}"`
     );
 
-    // 🔥 스트림 그대로 전달 (중요)
+    // 🔥 Node.js 스트림 전달 (Edge에선 안 됨)
     response.body.pipe(res);
-  } catch (e) {
+  } catch (err) {
+    console.error("download error:", err);
     res.status(500).send("Server error");
   }
 }
