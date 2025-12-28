@@ -142,7 +142,12 @@ export default function App() {
     document.body.removeChild(a);
   };
 
-
+  const handleReset = () => {
+    setUrl("");
+    setMedias([]);
+    setLoading(false);
+  };
+  
   const handleBulkDownload = async () => {
     if (!medias.length) return;
 
@@ -183,11 +188,22 @@ export default function App() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
+      
         <button onClick={handleFetch} disabled={loading}>
           {loading ? "불러오는 중..." : "불러오기"}
         </button>
+      
         <button onClick={handleBulkDownload} disabled={!medias.length}>
           📥 모두 다운로드
+        </button>
+      
+        {/* ♻️ 초기화 버튼 */}
+        <button
+          className="reset"
+          onClick={handleReset}
+          disabled={loading && !medias.length}
+        >
+          🔄 초기화
         </button>
       </div>
 
