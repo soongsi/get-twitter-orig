@@ -77,10 +77,9 @@ export default function App() {
         // 1️⃣ VxTwitter 1차 시도
         // =========================
         try {
-          const vxUrl = `https://api.vxtwitter.com/i/status/${tweetId}`;
-          const res = await fetch(vxUrl);
+          const res = await fetch(`/api/vxProxy?tweetId=${tweetId}`);
           const data = await res.json();
-    
+          
           if (Array.isArray(data.media_extended)) {
             data.media_extended.forEach((m) => {
               // 📸 IMAGE
