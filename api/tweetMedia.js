@@ -44,19 +44,26 @@ export default async function handler(req, res) {
           const raw = m.url || m.media_url_https || m.media_url;
           if (!raw) return;
 
-          let img = raw.replace(/(\?|\&)?name=[^&]+/, "");
-          img = img.includes("?") ? img + "&name=orig" : img + "?name=orig";
+          // 다운로드용 (orig)
+          let orig = raw.replace(/(\?|\&)?name=[^&]+/, "");
+          orig = orig.includes("?") ? orig + "&name=orig" : orig + "?name=orig";
+
+          // 미리보기용 (large)
+          let preview = raw.replace(/(\?|\&)?name=[^&]+/, "");
+          preview = preview.includes("?")
+            ? preview + "&name=large"
+            : preview + "?name=large";
 
           medias.push({
             type: "photo",
-            url: img,
-            thumb: img,
+            url: orig,        // 다운로드용
+            thumb: preview,   // 미리보기용
           });
           return;
         }
 
         /* ======================
-           🎞️ VIDEO (direct mp4)
+           🎞️ VIDEO (direct mp4 / amplify)
         ====================== */
         if ((m.type === "video" || m.type === "animated_gif") && m.url) {
           if (m.url.includes("video.twimg.com")) {
@@ -79,7 +86,7 @@ export default async function handler(req, res) {
           const mp4s = m.variants.filter(
             (v) => v.content_type === "video/mp4" && v.url
           );
-          if (mp4s.length === 0) return;
+          if (!mp4s.length) return;
 
           const best = mp4s.sort(
             (a, b) => (b.bitrate || 0) - (a.bitrate || 0)
@@ -98,10 +105,7 @@ export default async function handler(req, res) {
       });
     }
 
-    res.status(200).json({
-      tweetId,
-      medias,
-    });
+    res.status(200).json({ tweetId, medias });
   } catch (e) {
     res.status(500).json({ error: "server error", detail: e.message });
   }
