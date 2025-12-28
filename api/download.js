@@ -1,11 +1,11 @@
+import { Readable } from "stream";
+
 export const config = {
   runtime: "nodejs",
 };
 
 export default async function handler(req, res) {
   const { url, filename } = req.query;
-
-  console.log("DOWNLOAD REQUEST:", url);
 
   if (!url) {
     res.status(400).send("url required");
@@ -19,9 +19,6 @@ export default async function handler(req, res) {
       },
     });
 
-    console.log("FETCH STATUS:", response.status);
-    console.log("CONTENT-TYPE:", response.headers.get("content-type"));
-
     if (!response.ok) {
       res.status(500).send("Failed to fetch media");
       return;
@@ -32,12 +29,18 @@ export default async function handler(req, res) {
       return;
     }
 
+    const contentType =
+      response.headers.get("content-type") || "application/octet-stream";
+
+    res.setHeader("Content-Type", contentType);
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="${filename || "media"}"`
     );
 
-    response.body.pipe(res);
+    // 🔥 핵심: Web Stream → Node Stream 변환
+    const nodeStream = Readable.fromWeb(response.body);
+    nodeStream.pipe(res);
   } catch (err) {
     console.error("DOWNLOAD ERROR:", err);
     res.status(500).send("Server error");
