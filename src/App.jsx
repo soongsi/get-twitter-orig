@@ -213,7 +213,15 @@ export default function App() {
             {m.type === "photo" ? (
               <img src={m.url} alt={`media_${i}`} />
             ) : (
-              <video src={m.url} poster={m.thumb || undefined} controls />
+              <video
+                src={m.url}
+                poster={m.thumb || undefined}
+                controls
+                muted
+                playsInline
+                preload="metadata"
+                crossOrigin="anonymous"
+              />
             )}
             <button onClick={() => downloadFile(m, i)}>
               📥 파일 {i + 1} 다운로드
