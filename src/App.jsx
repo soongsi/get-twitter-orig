@@ -144,28 +144,19 @@ export default function App() {
   // =========================
   const downloadFile = async (media, idx) => {
     const ext = media.type === "video" ? "mp4" : "jpg";
-
-    const now = new Date();
-    const serial = `${now.getFullYear()}${String(
-      now.getMonth() + 1
-    ).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(
-      now.getHours()
-    ).padStart(2, "0")}${String(now.getMinutes()).padStart(
-      2,
-      "0"
-    )}${String(now.getSeconds()).padStart(2, "0")}_${idx + 1}`;
-
-    const filename = `twitter_${serial}.${ext}`;
-
-    const res = await fetch(media.url);
-    const blob = await res.blob();
-
+    const filename = `twitter_${Date.now()}_${idx + 1}.${ext}`;
+  
+    const proxyUrl =
+      `/api/download?url=${encodeURIComponent(media.url)}&filename=${filename}`;
+  
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
+    a.href = proxyUrl;
     a.download = filename;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(a.href);
+    document.body.removeChild(a);
   };
+
 
   const handleBulkDownload = async () => {
     if (!medias.length) return;
