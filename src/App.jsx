@@ -7,6 +7,19 @@ export default function App() {
   const [medias, setMedias] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const isIOS = () => {
+    if (typeof window === "undefined") return false;
+
+    const ua = window.navigator.userAgent || "";
+    const platform = window.navigator.platform || "";
+    const maxTouchPoints = window.navigator.maxTouchPoints || 0;
+
+    return (
+      /iPad|iPhone|iPod/.test(ua) ||
+      (platform === "MacIntel" && maxTouchPoints > 1)
+    );
+  };
+
   // =========================
   // 트윗 ID 추출
   // =========================
@@ -133,7 +146,12 @@ export default function App() {
     const filename = `twitter_${Date.now()}_${idx + 1}.${ext}`;
   
     const proxyUrl =
-      `/api/download?url=${encodeURIComponent(media.url)}&filename=${filename}`;
+      `/api/download?url=${encodeURIComponent(media.url)}&filename=${encodeURIComponent(filename)}`;
+
+    if (isIOS()) {
+      window.location.href = proxyUrl;
+      return;
+    }
   
     const a = document.createElement("a");
     a.href = proxyUrl;
@@ -151,6 +169,16 @@ export default function App() {
   
   const handleBulkDownload = async () => {
     if (!medias.length) return;
+
+    if (isIOS()) {
+      const filename = `twitter_media_${Date.now()}.zip`;
+      const zipUrl =
+        `/api/downloadZip?items=${encodeURIComponent(JSON.stringify(medias))}` +
+        `&filename=${encodeURIComponent(filename)}`;
+
+      window.location.href = zipUrl;
+      return;
+    }
 
     Swal.fire({
       title: "파일 다운로드 중...",
