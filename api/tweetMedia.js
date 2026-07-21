@@ -7,6 +7,22 @@ const extractTweetId = (url) => {
   return m ? m[1] : null;
 };
 
+const pickBestVideoUrl = (media) => {
+  if (!Array.isArray(media.variants)) {
+    return media.url?.includes("video.twimg.com") ? media.url : null;
+  }
+
+  const mp4s = media.variants.filter(
+    (variant) => variant.content_type === "video/mp4" && variant.url
+  );
+
+  if (mp4s.length === 0) {
+    return media.url?.includes("video.twimg.com") ? media.url : null;
+  }
+
+  return mp4s.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0].url;
+};
+
 export default async function handler(req, res) {
   const { url } = req.query;
 
@@ -57,13 +73,15 @@ export default async function handler(req, res) {
 
         // VIDEO / GIF
         if ((m.type === "video" || m.type === "animated_gif")) {
-          if (m.url && m.url.includes("video.twimg.com")) {
-            if (seen.has(m.url)) return;
-            seen.add(m.url);
+          const videoUrl = pickBestVideoUrl(m);
+
+          if (videoUrl) {
+            if (seen.has(videoUrl)) return;
+            seen.add(videoUrl);
 
             medias.push({
               type: "video",
-              url: m.url,
+              url: videoUrl,
               thumb: m.thumbnail_url || null,
             });
           }

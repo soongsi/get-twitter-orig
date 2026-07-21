@@ -203,6 +203,11 @@ export default function App() {
     });
   };
 
+  const getPreviewUrl = (media) => {
+    if (media.type !== "video") return media.url;
+    return `/api/mediaProxy?url=${encodeURIComponent(media.url)}`;
+  };
+
   // =========================
   // 🎨 렌더링
   // =========================
@@ -243,13 +248,12 @@ export default function App() {
               <img src={m.url} alt={`media_${i}`} />
             ) : (
               <video
-                src={m.url}
+                src={getPreviewUrl(m)}
                 poster={m.thumb || undefined}
                 controls
                 muted
                 playsInline
                 preload="metadata"
-                crossOrigin="anonymous"
               />
             )}
             <button onClick={() => downloadFile(m, i)}>
